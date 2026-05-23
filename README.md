@@ -26,6 +26,6 @@ Akses: http://localhost:8000/admin/login
 Default login: admin@talasaji.com / admin123
 
 ## Integrasi Database
-Database ini DIGUNAKAN BERSAMA dengan repo talasaji-app (Flutter).
+Database ini DIGUNAKAN BERSAMA dengan repo milik aplikasi(Flutter).
 Talasaji-admin adalah PEMILIK migrations.
 Koordinasikan setiap perubahan schema dengan tim mobile sebelum migrate.
