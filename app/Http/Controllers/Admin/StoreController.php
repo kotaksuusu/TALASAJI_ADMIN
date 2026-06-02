@@ -9,7 +9,13 @@ class StoreController extends Controller
 {
     public function index()
     {
-        $all     = Store::with(['owner', 'menus'])->latest()->get();
+        $all     = Store::with('owner')
+            ->select(['id', 'user_id', 'name', 'description', 'address', 'phone',
+                      'logo', 'latitude', 'longitude', 'operational_status',
+                      'registration_status', 'open_time', 'close_time',
+                      'category', 'service_type', 'created_at', 'updated_at'])
+            ->latest()
+            ->get();
         $active  = $all->where('registration_status', 'active')->values();
         $pending = $all->where('registration_status', 'pending')->values();
 
@@ -18,11 +24,11 @@ class StoreController extends Controller
         $totalPending = $pending->count();
 
         $avgDaysInQueue = $pending->avg(function ($s) {
-            return now()->diffInDays($s->created_at);
+            return $s->created_at->diffInDays(now());
         }) ?? 0;
 
-        $requiresAction = $pending->filter(function ($s) {
-            return now()->diffInDays($s->created_at) <= 3;
+        $agingQueue = $pending->filter(function ($s) {
+            return $s->created_at->diffInDays(now()) > 7;
         })->count();
 
         $allPartnersJson = $all->map(function ($s) {
@@ -46,15 +52,16 @@ class StoreController extends Controller
                 'owner'       => optional($s->owner)->name ?? '-',
                 'layanan'     => $s->service_type ?? '-',
                 'appliedAt'   => optional($s->created_at)->toISOString(),
-                'isNew'       => now()->diffInDays($s->created_at) <= 3,
-                'menuCount'   => $s->menus ? $s->menus->count() : 0,
+                'isNew'       => $s->created_at->diffInDays(now()) <= 3,
+                'isAging'     => $s->created_at->diffInDays(now()) > 7,
+                'menuCount'   => 0,
             ];
         })->values();
 
         return view('admin.stores.index', compact(
             'all', 'active', 'pending',
             'totalAll', 'totalActive', 'totalPending',
-            'avgDaysInQueue', 'requiresAction',
+            'avgDaysInQueue', 'agingQueue',
             'allPartnersJson'
         ));
     }

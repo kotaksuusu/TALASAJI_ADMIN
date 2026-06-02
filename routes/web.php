@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\SettingsController;
 
@@ -24,5 +25,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
         Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     });
 });

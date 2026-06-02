@@ -48,7 +48,6 @@ class SettingsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'app_name' => 'nullable|string|max:255',
-            'logo'     => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -59,17 +58,6 @@ class SettingsController extends Controller
 
         if ($request->filled('app_name')) {
             $settingsData['app_name'] = $request->app_name;
-        }
-
-        if ($request->hasFile('logo')) {
-            $existing = Setting::first();
-            if ($existing && $existing->logo && File::exists(public_path('uploads/' . $existing->logo))) {
-                File::delete(public_path('uploads/' . $existing->logo));
-            }
-            $logo     = $request->file('logo');
-            $logoName = 'logo_' . time() . '.' . $logo->getClientOriginalExtension();
-            $logo->move(public_path('uploads'), $logoName);
-            $settingsData['logo'] = $logoName;
         }
 
         if (!empty($settingsData)) {
@@ -103,7 +91,7 @@ class SettingsController extends Controller
         }
 
         $admin->update([
-            'password' => Hash::make($request->new_password),
+            'password' => $request->new_password,
         ]);
 
         return back()->with('success', 'Password berhasil diperbarui.');

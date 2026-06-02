@@ -85,11 +85,12 @@ function renderTable() {
   tbody.innerHTML = '';
 
   if (!pageItems.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No partners found.</td></tr>`;
-    document.getElementById('showing-label').textContent = 'No results';
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Tidak ada mitra ditemukan.</td></tr>`;
+    document.getElementById('showing-label').textContent = 'Tidak ada hasil';
     return;
   }
 
+  const statusLabels = { Active:'Aktif', Pending:'Menunggu', Inactive:'Tidak Aktif' };
   pageItems.forEach(p => {
     const tr = document.createElement('tr');
     tr.className = 'partner-row';
@@ -97,7 +98,10 @@ function renderTable() {
       <td class="col-brand">
         <div class="brand-cell">
           <div class="partner-avatar">
-            ${p.image ? `<img src="${p.image}" alt="${p.name}" />` : `<i data-lucide="image-off"></i>`}
+            ${p.image
+            ? `<img src="${p.image}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="avatar-initials" style="display:none;">${p.name.charAt(0).toUpperCase()}</span>`
+            : `<span class="avatar-initials">${p.name.charAt(0).toUpperCase()}</span>`
+          }
           </div>
           <div class="brand-info">
             <span class="brand-name">${p.name}</span>
@@ -111,7 +115,7 @@ function renderTable() {
       </td>
       <td class="col-status">
         <span class="status-dot ${p.status === 'Active' ? 'dot-active' : 'dot-inactive'}"></span>
-        <span class="status-label">${p.status}</span>
+        <span class="status-label">${statusLabels[p.status] || p.status}</span>
       </td>
       <td class="col-actions">
         <button class="action-eye" data-id="${p.id}" title="View Details">
@@ -133,7 +137,7 @@ function renderTable() {
 
   const end = Math.min(start + PER_PAGE, filtered.length);
   document.getElementById('showing-label').textContent =
-    `Showing ${start + 1}–${end} of ${filtered.length} Artisans`;
+    `Menampilkan ${start + 1}–${end} dari ${filtered.length} Mitra`;
 }
 
 function renderPagination() {
@@ -189,7 +193,7 @@ function openPartnerModal(p) {
   document.getElementById('modal-category').value = p.category || '-';
   document.getElementById('modal-menu-count').value = p.menuCount ?? '-';
   document.getElementById('modal-rating-value').textContent = '-';
-  document.getElementById('modal-reviews').textContent = '(no reviews yet)';
+  document.getElementById('modal-reviews').textContent = '(belum ada ulasan)';
   document.getElementById('modal-stars').innerHTML = '';
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -229,23 +233,26 @@ function renderPendingList() {
     card.innerHTML = `
       <div class="pending-card-inner">
         <div class="pending-photo">
-          ${p.image ? `<img src="${p.image}" alt="${p.name}" />` : `<i data-lucide="image-off"></i>`}
+          ${p.image
+            ? `<img src="${p.image}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="avatar-initials" style="display:none;">${p.name.charAt(0).toUpperCase()}</span>`
+            : `<span class="avatar-initials">${p.name.charAt(0).toUpperCase()}</span>`
+          }
         </div>
         <div class="pending-info">
           <div class="pending-name-row">
             <span class="pending-name">${p.name}</span>
             ${p.isNew ? `<span class="badge-new">NEW</span>` : ''}
           </div>
-          <p class="pending-meta">Owner: ${p.owner} · Applied: ${appliedDate}</p>
+          <p class="pending-meta">Pemilik: ${p.owner} · Mendaftar: ${appliedDate}</p>
           <div class="pending-tags">
             <span class="pending-tag"><i data-lucide="store"></i> ${p.category || '-'}</span>
             <span class="pending-tag"><i data-lucide="utensils"></i> ${p.layanan || '-'}</span>
           </div>
         </div>
         <div class="pending-actions">
-          <button class="btn-approve" data-id="${p.id}">Approve</button>
-          <button class="btn-reject-card" data-id="${p.id}">Reject</button>
-          <button class="btn-review" data-id="${p.id}">Review Details</button>
+          <button class="btn-approve" data-id="${p.id}">Setujui</button>
+          <button class="btn-reject-card" data-id="${p.id}">Tolak</button>
+          <button class="btn-review" data-id="${p.id}">Detail</button>
         </div>
       </div>
     `;
@@ -259,7 +266,7 @@ function renderPendingList() {
   document.querySelectorAll('.btn-review').forEach(btn => btn.addEventListener('click', () => openReviewModal(btn.dataset.id)));
 
   const end = Math.min(start + PENDING_PER_PAGE, pendingPartners.length);
-  document.getElementById('showing-label').textContent = `Showing ${start + 1}–${end} of ${pendingPartners.length} Artisans`;
+  document.getElementById('showing-label').textContent = `Menampilkan ${start + 1}–${end} dari ${pendingPartners.length} Mitra`;
   renderPendingPagination();
 }
 
@@ -282,7 +289,7 @@ function updateQueueStats() {
   const totalEl = document.getElementById('queue-total');
   const actionEl = document.getElementById('queue-action');
   if (totalEl) totalEl.textContent = pendingPartners.length;
-  if (actionEl) actionEl.textContent = `${pendingPartners.filter(p => p.isNew).length} Apps`;
+  if (actionEl) actionEl.textContent = `${pendingPartners.filter(p => p.isAging).length} UMKM`;
 }
 
 async function handleApprove(id) {

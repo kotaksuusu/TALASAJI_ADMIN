@@ -60,6 +60,11 @@ class Store extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(\App\Models\Review::class);
+    }
+
     public function scopeActive($q)
     {
         return $q->where('registration_status', 'active');

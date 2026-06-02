@@ -6,6 +6,10 @@
 <header class="topbar">
   <div class="topbar-spacer"></div>
   <div class="topbar-actions">
+    <a href="{{ route('admin.notifications.index') }}" class="notif-btn" id="notif-btn">
+      <i data-lucide="bell"></i>
+      <span class="notif-badge" id="notif-count" style="display:none;"></span>
+    </a>
     <a href="{{ route('admin.settings') }}" style="display:block;text-decoration:none;">
       <div class="avatar" style="cursor:pointer;">
         <img src="https://i.pravatar.cc/100?img=12" alt="Admin" />
@@ -17,8 +21,8 @@
 <div class="content-area">
   <div class="content-header">
     <div>
-      <h1>Curator's Overview</h1>
-      <p class="subtitle">Here is the state of the TALASAJI ecosystem today.</p>
+      <h1>Ikhtisar Kurator</h1>
+      <p class="subtitle">Berikut kondisi ekosistem TALASAJI hari ini.</p>
     </div>
     <span class="badge-update">Last updated: Just now</span>
   </div>
@@ -32,10 +36,10 @@
         @elseif($storeGrowth < 0)
             <span class="change negative">{{ $storeGrowth }}% ↓</span>
         @else
-            <span class="change neutral">Stable —</span>
+            <span class="change neutral">Stabil —</span>
         @endif
       </div>
-      <p class="stat-label">Total UMKM Partners</p>
+      <p class="stat-label">Total Mitra UMKM</p>
       <p class="stat-value">{{ $totalStores }}</p>
     </div>
     <div class="stat-card">
@@ -46,24 +50,24 @@
         @elseif($orderGrowth < 0)
             <span class="change negative">{{ $orderGrowth }}% ↓</span>
         @else
-            <span class="change neutral">Stable —</span>
+            <span class="change neutral">Stabil —</span>
         @endif
       </div>
-      <p class="stat-label">Total Transactions</p>
+      <p class="stat-label">Total Transaksi</p>
       <p class="stat-value">{{ number_format($totalOrders) }}</p>
     </div>
     <div class="stat-card">
       <div class="stat-card-header">
         <div class="icon-box"><i data-lucide="map"></i></div>
         @if($regionDiff > 0)
-            <span class="change positive">+{{ $regionDiff }} region ↑</span>
+            <span class="change positive">+{{ $regionDiff }} wilayah ↑</span>
         @elseif($regionDiff < 0)
-            <span class="change negative">{{ $regionDiff }} region ↓</span>
+            <span class="change negative">{{ $regionDiff }} wilayah ↓</span>
         @else
-            <span class="change neutral">Stable —</span>
+            <span class="change neutral">Stabil —</span>
         @endif
       </div>
-      <p class="stat-label">Active Regions</p>
+      <p class="stat-label">Wilayah Aktif</p>
       <p class="stat-value">{{ $activeRegions }}</p>
     </div>
     <div class="stat-card">
@@ -71,7 +75,7 @@
         <div class="icon-box warning"><i data-lucide="calendar-check"></i></div>
         <span class="change negative">{{ $totalPending > 0 ? '+' . $totalPending : '0' }}</span>
       </div>
-      <p class="stat-label">Pending Approvals</p>
+      <p class="stat-label">Menunggu Persetujuan</p>
       <p class="stat-value">{{ $totalPending }}</p>
     </div>
   </div>
@@ -80,7 +84,7 @@
     <div class="chart-panel">
       <div class="chart-header">
         <div>
-          <h2>Ecosystem Growth</h2>
+          <h2>Pertumbuhan Ekosistem</h2>
           <p class="chart-subtitle">Total transaksi & revenue per bulan (6 bulan terakhir).</p>
         </div>
         <span class="badge-monthly" style="cursor:default;pointer-events:none;">Monthly</span>
@@ -91,7 +95,7 @@
     </div>
 
     <div class="activity-panel">
-      <h2>Recent Activity</h2>
+      <h2>Aktivitas Terkini</h2>
       <div class="activity-list">
         @forelse($recentOrders as $order)
           <div class="activity-item">
@@ -99,7 +103,7 @@
               <i data-lucide="shopping-bag" style="width:16px;height:16px;color:#FF7901;"></i>
             </div>
             <div class="activity-text">
-              <p><b>{{ $order->store->name ?? 'Unknown' }}</b> — pesanan baru masuk.</p>
+              <p><b>{{ $order->store->name ?? 'Tidak Diketahui' }}</b> — pesanan baru masuk.</p>
               <span class="activity-time">
                 {{ $order->created_at->diffForHumans() }}
               </span>
@@ -111,7 +115,6 @@
           </p>
         @endforelse
       </div>
-      <a href="{{ route('admin.umkm.index') }}" class="view-all">View All Activity</a>
     </div>
   </div>
 </div>
@@ -119,6 +122,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const chartLabels   = @json($chartLabels);
 const chartOrders   = @json($chartOrders);

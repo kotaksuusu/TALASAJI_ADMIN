@@ -1,5 +1,5 @@
 @extends('admin.layouts.app')
-@section('title', 'Settings — TALASAJI')
+@section('title', 'Pengaturan — TALASAJI')
 
 @section('styles')
 <style>
@@ -179,19 +179,29 @@
   color: #9A1E22;
 }
 .divider { border: none; border-top: 1px solid #f0ebe6; margin: 20px 0; }
-
-body,
-.layout,
-.main-area {
-  overflow: visible !important;
-  height: auto !important;
+.pw-wrapper {
+  position: relative;
 }
-.sidebar {
-  height: 100vh !important;
-  position: sticky !important;
-  top: 0 !important;
-  overflow-y: auto;
+.pw-wrapper .form-input {
+  padding-right: 44px;
+  box-sizing: border-box;
+  width: 100%;
 }
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #aaa;
+}
+.pw-toggle:hover { color: #9A1E22; }
+.pw-toggle i { width: 18px; height: 18px; }
 </style>
 @endsection
 
@@ -200,6 +210,10 @@ body,
 <header class="topbar">
   <div class="topbar-spacer"></div>
   <div class="topbar-actions">
+    <a href="{{ route('admin.notifications.index') }}" class="notif-btn" id="notif-btn">
+      <i data-lucide="bell"></i>
+      <span class="notif-badge" id="notif-count" style="display:none;"></span>
+    </a>
     <a href="{{ route('admin.settings') }}" style="display:block;text-decoration:none;">
       <div class="avatar" style="cursor:pointer;">
         <img src="https://i.pravatar.cc/100?img=12" alt="Admin" />
@@ -212,8 +226,8 @@ body,
 
   <div class="content-header">
     <div>
-      <h1>Configuration & Preferences</h1>
-      <p class="subtitle">Manage your profile, application settings, and account security.</p>
+      <h1>Konfigurasi & Preferensi</h1>
+      <p class="subtitle">Kelola profil, pengaturan aplikasi, dan keamanan akun Anda.</p>
     </div>
   </div>
 
@@ -237,8 +251,8 @@ body,
     <div>
 
       <div class="settings-card">
-        <div class="settings-card-title">Profile Settings</div>
-        <div class="settings-card-sub">Update your application name, logo, and admin identity.</div>
+        <div class="settings-card-title">Pengaturan Profil</div>
+        <div class="settings-card-sub">Perbarui nama aplikasi, logo, dan identitas admin.</div>
 
         <div class="avatar-section">
           <div class="avatar-preview">
@@ -246,7 +260,7 @@ body,
           </div>
           <div>
             <span class="avatar-name">{{ Auth::user()->name }}</span>
-            <span class="avatar-role">Administrator · TALASAJI Culinary Curator</span>
+            <span class="avatar-role">Administrator · TALASAJI Kurator Kuliner</span>
           </div>
         </div>
 
@@ -255,63 +269,68 @@ body,
           @method('PUT')
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="app_name">App Name</label>
+              <label class="form-label" for="app_name">Nama Aplikasi</label>
               <input type="text" id="app_name" name="app_name" class="form-input"
                      value="{{ old('app_name', $settings->app_name ?? 'TALASAJI') }}" />
             </div>
             <div class="form-group">
-              <label class="form-label">Admin Email</label>
+              <label class="form-label">Email Admin</label>
               <input type="text" class="form-input" value="{{ Auth::user()->email }}" readonly
                      style="background:#f9f6f3;color:#aaa;cursor:default;" />
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="logo">App Logo</label>
-            <input type="file" id="logo" name="logo" class="form-input" accept="image/*" style="padding:10px;" />
-            @if(!empty($settings->logo))
-              <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
-                <img src="{{ asset('uploads/' . $settings->logo) }}" alt="Logo"
-                     style="height:36px;border-radius:8px;border:1px solid #f0ebe6;" />
-                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#888;">Logo saat ini</span>
-              </div>
-            @endif
-          </div>
+
           <div class="form-actions">
-            <button type="submit" class="btn-back">Save Changes</button>
+            <button type="submit" class="btn-back">Simpan Perubahan</button>
           </div>
         </form>
       </div>
 
       <div class="settings-card">
-        <div class="settings-card-title">Security</div>
-        <div class="settings-card-sub">Change your admin account password. Use a strong password to keep your account safe.</div>
+        <div class="settings-card-title">Keamanan</div>
+        <div class="settings-card-sub">Ubah password akun admin Anda. Gunakan password yang kuat untuk menjaga keamanan akun.</div>
 
         <form method="POST" action="{{ route('admin.settings.password') }}">
           @csrf
           @method('PUT')
           <div class="form-group">
-            <label class="form-label" for="current_password">Current Password</label>
-            <input type="password" id="current_password" name="current_password"
-                   class="form-input" placeholder="Enter your current password" autocomplete="current-password" />
+            <label class="form-label" for="current_password">Password Saat Ini</label>
+            <div class="pw-wrapper">
+              <input type="password" id="current_password" name="current_password"
+                     class="form-input" placeholder="Masukkan password Anda saat ini" autocomplete="current-password" />
+              <button type="button" class="pw-toggle" onclick="togglePw('current_password', this)" tabindex="-1">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
           </div>
           <hr class="divider">
           <div class="form-group">
-            <label class="form-label" for="new_password">New Password</label>
-            <input type="password" id="new_password" name="new_password"
-                   class="form-input" placeholder="Minimum 8 characters"
-                   autocomplete="new-password" oninput="checkStrength(this.value)" />
+            <label class="form-label" for="new_password">Password Baru</label>
+            <div class="pw-wrapper">
+              <input type="password" id="new_password" name="new_password"
+                     class="form-input" placeholder="Minimal 8 karakter"
+                     autocomplete="new-password" oninput="checkStrength(this.value)" />
+              <button type="button" class="pw-toggle" onclick="togglePw('new_password', this)" tabindex="-1">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
             <div class="strength-bar-wrap">
               <div class="strength-bar" id="strength-bar"></div>
             </div>
-            <span class="strength-hint" id="strength-label">Enter a new password</span>
+            <span class="strength-hint" id="strength-label">Masukkan password baru</span>
           </div>
           <div class="form-group">
-            <label class="form-label" for="new_password_confirmation">Confirm New Password</label>
-            <input type="password" id="new_password_confirmation" name="new_password_confirmation"
-                   class="form-input" placeholder="Re-enter new password" autocomplete="new-password" />
+            <label class="form-label" for="new_password_confirmation">Konfirmasi Password Baru</label>
+            <div class="pw-wrapper">
+              <input type="password" id="new_password_confirmation" name="new_password_confirmation"
+                     class="form-input" placeholder="Masukkan ulang password baru" autocomplete="new-password" />
+              <button type="button" class="pw-toggle" onclick="togglePw('new_password_confirmation', this)" tabindex="-1">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
           </div>
           <div class="form-actions">
-            <button type="submit" class="btn-back">Update Password</button>
+            <button type="submit" class="btn-back">Perbarui Password</button>
           </div>
         </form>
       </div>
@@ -322,15 +341,15 @@ body,
 
       <div class="info-card">
         <div class="info-card-logo">
-          <img src="{{ asset('images/logo_talasaji.png') }}" alt="TALASAJI" />
+          <img src="{{ asset('images/Logo_Talasaji_1.png') }}" alt="TALASAJI" />
           <div>
             <div class="info-card-logo-name">{{ $settings->app_name ?? 'TALASAJI' }}</div>
-            <div class="info-card-logo-sub">Culinary Curator Platform</div>
+            <div class="info-card-logo-sub">Platform Kurator Kuliner</div>
           </div>
         </div>
         <div class="info-item">
           <span class="info-label">Status Aplikasi</span>
-          <span class="info-value active">Active</span>
+          <span class="info-value active">Aktif</span>
         </div>
         <div class="info-item">
           <span class="info-label">Total UMKM Partner</span>
@@ -341,20 +360,20 @@ body,
           <span class="info-value">{{ number_format($totalOrders) }}</span>
         </div>
         <div class="info-item">
-          <span class="info-label">Pending Approval</span>
+          <span class="info-label">Menunggu Persetujuan</span>
           <span class="info-value" style="{{ $totalPending > 0 ? 'color:#FF7901;' : '' }}">
             {{ $totalPending }}
           </span>
         </div>
         <div class="info-item">
-          <span class="info-label">Active Regions</span>
+          <span class="info-label">Wilayah Aktif</span>
           <span class="info-value">{{ $activeRegions }}</span>
         </div>
       </div>
 
       <div class="info-card">
-        <div class="settings-card-title" style="margin-bottom:4px;">Platform Overview</div>
-        <div class="settings-card-sub" style="margin-bottom:16px;">Ecosystem summary this month.</div>
+        <div class="settings-card-title" style="margin-bottom:4px;">Ikhtisar Platform</div>
+        <div class="settings-card-sub" style="margin-bottom:16px;">Ringkasan ekosistem bulan ini.</div>
         <div class="info-item">
           <span class="info-label">Transaksi Bulan Ini</span>
           <span class="info-value">{{ $ordersThisMonth }}</span>
@@ -382,7 +401,7 @@ function checkStrength(val) {
   const label = document.getElementById('strength-label');
   if (!val.length) {
     bar.style.width = '0%'; bar.style.background = '#e0e0e0';
-    label.textContent = 'Enter a new password'; label.style.color = '#888';
+    label.textContent = 'Masukkan password baru'; label.style.color = '#888';
     return;
   }
   let s = 0;
@@ -391,14 +410,26 @@ function checkStrength(val) {
   if (/[0-9]/.test(val))         s++;
   if (/[^A-Za-z0-9]/.test(val))  s++;
   const cfg = [
-    { w:'25%',  c:'#e53935', t:'Weak' },
-    { w:'50%',  c:'#FF7901', t:'Fair' },
-    { w:'75%',  c:'#FFC107', t:'Good' },
-    { w:'100%', c:'#2BA67B', t:'Strong' },
+    { w:'25%',  c:'#e53935', t:'Lemah' },
+    { w:'50%',  c:'#FF7901', t:'Cukup' },
+    { w:'75%',  c:'#FFC107', t:'Baik' },
+    { w:'100%', c:'#2BA67B', t:'Kuat' },
   ];
   const r = cfg[Math.min(s - 1, 3)];
   bar.style.width = r.w; bar.style.background = r.c;
   label.textContent = r.t; label.style.color = r.c;
+}
+function togglePw(fieldId, btn) {
+  const input = document.getElementById(fieldId);
+  const icon  = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.setAttribute('data-lucide', 'eye-off');
+  } else {
+    input.type = 'password';
+    icon.setAttribute('data-lucide', 'eye');
+  }
+  lucide.createIcons();
 }
 </script>
 @endsection
