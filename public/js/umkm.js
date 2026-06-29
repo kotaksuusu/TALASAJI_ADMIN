@@ -195,6 +195,18 @@ function openPartnerModal(p) {
   document.getElementById('modal-rating-value').textContent = '-';
   document.getElementById('modal-reviews').textContent = '(belum ada ulasan)';
   document.getElementById('modal-stars').innerHTML = '';
+
+  const photoEl = document.getElementById('modal-photo');
+  const placeholderEl = document.getElementById('modal-photo-placeholder');
+  if (p.image) {
+    photoEl.src = p.image;
+    photoEl.style.display = 'block';
+    placeholderEl.style.display = 'none';
+  } else {
+    photoEl.style.display = 'none';
+    placeholderEl.style.display = 'flex';
+  }
+
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   lucide.createIcons();

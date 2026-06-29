@@ -13,7 +13,7 @@ class AdminSeeder extends Seeder
             ['email' => 'admin@talasaji.com'],
             [
                 'name'     => 'Super Admin',
-                'password' => Hash::make('admin123'),
+                'password' => 'admin123',
                 'role'     => 'admin',
             ]
         );

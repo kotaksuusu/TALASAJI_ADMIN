@@ -12,12 +12,13 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['table_id', 'user_id', 'store_id', 'status', 'total_amount', 'service_type', 'notes', 'location_validation'];
+    protected $fillable = ['table_id', 'user_id', 'store_id', 'status', 'total_amount', 'unique_nominal', 'service_type', 'notes', 'location_validation'];
 
     protected function casts(): array
     {
         return [
             'total_amount' => 'decimal:2',
+            'unique_nominal' => 'integer',
         ];
     }
 

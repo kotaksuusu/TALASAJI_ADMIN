@@ -106,6 +106,12 @@
       <button class="modal-close" id="modal-close"><i data-lucide="x"></i></button>
     </div>
     <div class="modal-body">
+      <div class="review-photo-wrap" id="modal-photo-wrap" style="margin-bottom: 20px; border-radius: 12px; overflow: hidden; height: 160px; background: #FFE6D2; display: flex; align-items: center; justify-content: center; border: 1px dashed #ffd3b3;">
+        <img id="modal-photo" src="" alt="Foto Toko" class="review-photo" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+        <div class="review-photo-placeholder" id="modal-photo-placeholder" style="display: flex; flex-direction: column; align-items: center; color: #9A1E22; gap: 6px;">
+          <i data-lucide="image-off"></i><span style="font-size: 13px; font-weight: 500;">Tidak ada foto</span>
+        </div>
+      </div>
       <div class="form-group">
           <label class="form-label">Nama Bisnis</label>
         <input type="text" class="form-input" id="modal-name" readonly />

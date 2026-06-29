@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class StoreController extends Controller
 {
@@ -45,7 +47,7 @@ class StoreController extends Controller
                                     ? 'Active'
                                     : ($s->registration_status === 'pending' ? 'Pending' : 'Inactive'),
                 'regStatus'   => $s->registration_status,
-                'image'       => $s->logo ? asset('storage/' . $s->logo) : null,
+                'image'       => $s->logo ? (str_starts_with($s->logo, 'http') ? $s->logo : asset('storage/' . $s->logo)) : null,
                 'telepon'     => $s->phone ?? '-',
                 'jamBuka'     => $s->open_time ?? 'Tidak tersedia',
                 'jamTutup'    => $s->close_time ?? 'Tidak tersedia',
@@ -82,11 +84,42 @@ class StoreController extends Controller
 
     public function approve($id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::with('owner')->findOrFail($id);
         $store->update([
             'registration_status' => 'active',
-            'operational_status'  => 'open',
+            'operational_status'  => 'tutup',
         ]);
+
+        // Hapus cache toko agar Flutter dapat data terbaru
+        Cache::forget('stores_all_all');
+        Cache::forget('stores_all_' . $store->user_id);
+        if ($store->seller_id) {
+            Cache::forget('stores_all_' . $store->seller_id);
+        }
+
+        // Hapus cache menu & kategori untuk toko ini
+        Cache::forget("menus_index_{$store->id}_all");
+
+        // Notifikasi ke owner
+        NotificationService::create(
+            userId: $store->user_id,
+            orderId: null,
+            title: 'Toko Disetujui ✅',
+            body: "Toko \"{$store->name}\" Anda telah disetujui dan sekarang aktif!",
+            type: 'store_approved',
+        );
+
+        // Notifikasi ke seller (jika ada)
+        if ($store->seller_id) {
+            NotificationService::create(
+                userId: $store->seller_id,
+                orderId: null,
+                title: 'Toko Disetujui ✅',
+                body: "Toko \"{$store->name}\" yang Anda kelola telah disetujui!",
+                type: 'store_approved',
+            );
+        }
+
         return response()->json(['success' => true, 'message' => 'Store approved successfully.']);
     }
 
@@ -96,13 +129,34 @@ class StoreController extends Controller
             'rejection_reason'   => 'required|string|min:20',
             'rejection_category' => 'required|string',
         ]);
-        $store = Store::findOrFail($id);
+        $store = Store::with('owner')->findOrFail($id);
         $store->update([
             'registration_status' => 'rejected',
             'operational_status'  => 'closed',
             'rejection_reason'    => $request->rejection_reason,
             'rejection_category'  => $request->rejection_category,
         ]);
+
+        // Notifikasi ke owner
+        NotificationService::create(
+            userId: $store->user_id,
+            orderId: null,
+            title: 'Toko Ditolak ❌',
+            body: "Toko \"{$store->name}\" tidak disetujui. Alasan: {$request->rejection_reason}",
+            type: 'store_rejected',
+        );
+
+        // Notifikasi ke seller (jika ada)
+        if ($store->seller_id) {
+            NotificationService::create(
+                userId: $store->seller_id,
+                orderId: null,
+                title: 'Toko Ditolak ❌',
+                body: "Toko \"{$store->name}\" yang Anda kelola tidak disetujui.",
+                type: 'store_rejected',
+            );
+        }
+
         return response()->json(['success' => true, 'message' => 'Store rejected.']);
     }
 }

@@ -12,9 +12,9 @@ class Store extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'name', 'description', 'address',
+        'user_id', 'seller_id', 'name', 'description', 'address',
         'latitude', 'longitude', 'radius_meter',
-        'phone', 'logo',
+        'phone', 'logo', 'payment_qr',
         'operational_status', 'registration_status',
         'rejection_reason', 'rejection_category',
         'open_time', 'close_time', 'category', 'service_type',
@@ -40,6 +40,11 @@ class Store extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'seller_id');
+    }
+
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
@@ -60,9 +65,9 @@ class Store extends Model
         return $this->hasMany(Order::class);
     }
 
-    public function reviews()
+    public function reviews(): HasMany
     {
-        return $this->hasMany(\App\Models\Review::class);
+        return $this->hasMany(Review::class);
     }
 
     public function scopeActive($q)
