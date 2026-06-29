@@ -14,6 +14,7 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 #[OA\Tag(name: 'Menus', description: 'Menu management endpoints')]
 class MenuController extends Controller
@@ -32,22 +33,24 @@ class MenuController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $cacheKey = 'menus_index_' . ($request->get('store_id') ?? 'all') . '_' . ($request->get('category_id') ?? 'all');
-        $menus = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($request) {
-            $query = Menu::with('category:id,name')
-                ->withAvg('reviews', 'rating')
-                ->withCount('reviews');
+        $query = Menu::with('category:id,name')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews');
 
-            if ($request->has('category_id')) {
-                $query->where('category_id', $request->category_id);
-            }
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
 
-            if ($request->has('store_id')) {
-                $query->where('store_id', $request->store_id);
-            }
+        if ($request->has('store_id')) {
+            $query->where('store_id', $request->store_id);
+        }
 
-            return $query->orderBy('display_order')->get();
-        });
+        $menus = $query->orderBy('display_order')->get();
+
+        \Illuminate\Support\Facades\Log::debug('[MenuController] GET /api/menus', [
+            'store_id' => $request->get('store_id'),
+            'count' => $menus->count(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -128,6 +131,8 @@ class MenuController extends Controller
             ->where('owner_menu_id', $ownerMenu->id)
             ->first();
 
+        $this->clearMenuCache($category->store_id);
+
         return response()->json([
             'success' => true,
             'message' => 'Menu created successfully and synced to all stores.',
@@ -156,32 +161,56 @@ class MenuController extends Controller
 
         $validated = $request->validated();
 
-        // Only pemilik can update item details (cascading)
-        if (isset($validated['name']) || isset($validated['description']) || isset($validated['price']) || isset($validated['image']) || isset($validated['is_recommended'])) {
-            if ($user->role !== 'pemilik') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Only owners can update menu details.',
-                    'data' => null
-                ], 403);
-            }
+        // ── Handle stock_status FIRST — allowed for seller & pemilik ────────
+        // Pisahkan dari update detail biar seller bisa toggle tanpa 403
+        $onlyStockStatus = count($validated) === 1 && isset($validated['stock_status']);
+        $onlyDisplayOrder = count($validated) === 1 && isset($validated['display_order']);
 
-            // Update owner_menu and cascade to all linked stores
-            $ownerMenu = OwnerMenu::find($menu->owner_menu_id);
-            if ($ownerMenu && $ownerMenu->user_id === $user->id) {
-                $ownerMenu->update($validated);
-
-                Menu::where('owner_menu_id', $ownerMenu->id)->update([
-                    'name' => $ownerMenu->name,
-                    'description' => $ownerMenu->description,
-                    'price' => $ownerMenu->price,
-                    'image' => $ownerMenu->image,
-                    'is_recommended' => $ownerMenu->is_recommended,
-                ]);
-            }
+        if ($onlyStockStatus) {
+            $menu->stock_status = $validated['stock_status'];
+            $menu->save();
+            $this->clearMenuCache($menu->store_id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock status updated successfully',
+                'data' => $menu->fresh()
+            ]);
         }
 
-        // Update stock_status (allowed for both owner and seller)
+        if ($onlyDisplayOrder) {
+            $menu->display_order = $validated['display_order'];
+            $menu->save();
+            $this->clearMenuCache($menu->store_id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Display order updated successfully',
+                'data' => $menu->fresh()
+            ]);
+        }
+
+        // Only pemilik can update item details (cascading)
+        if ($user->role !== 'pemilik') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only owners can update menu details.',
+                'data' => null
+            ], 403);
+        }
+
+        // Update owner_menu and cascade to all linked stores
+        $ownerMenu = OwnerMenu::find($menu->owner_menu_id);
+        if ($ownerMenu && $ownerMenu->user_id === $user->id) {
+            $ownerMenu->update($validated);
+
+            Menu::where('owner_menu_id', $ownerMenu->id)->update([
+                'name' => $ownerMenu->name,
+                'description' => $ownerMenu->description,
+                'price' => $ownerMenu->price,
+                'image' => $ownerMenu->image,
+                'is_recommended' => $ownerMenu->is_recommended,
+            ]);
+        }
+
         if (isset($validated['stock_status'])) {
             $menu->stock_status = $validated['stock_status'];
         }
@@ -190,6 +219,8 @@ class MenuController extends Controller
         }
 
         $menu->save();
+
+        $this->clearMenuCache($menu->store_id);
 
         return response()->json([
             'success' => true,
@@ -219,6 +250,8 @@ class MenuController extends Controller
             ->where('user_id', $user->id)
             ->delete();
 
+        $this->clearMenuCache($menu->store_id);
+
         return response()->json([
             'success' => true,
             'message' => 'Menu deleted successfully from all stores.',
@@ -229,5 +262,25 @@ class MenuController extends Controller
     private function getStoreIdFromCategory($categoryId): int
     {
         return Category::findOrFail($categoryId)->store_id;
+    }
+
+    /**
+     * Clear all cached menu queries for a given store.
+     */
+    private function clearMenuCache(int $storeId): void
+    {
+        $prefix = 'menus_index_';
+        Cache::forget($prefix . $storeId . '_all');
+
+        // Also flush any category-filtered cache variants for this store
+        // by iterating common patterns — safest is to forget the store's cache group.
+        // Simple approach: also forget the "all stores" cache key.
+        Cache::forget($prefix . 'all_all');
+
+        // Forget per-store keys for all category IDs (wildcard: clear menu cache for this store)
+        $categoryIds = Category::where('store_id', $storeId)->pluck('id');
+        foreach ($categoryIds as $catId) {
+            Cache::forget($prefix . $storeId . '_' . $catId);
+        }
     }
 }
