@@ -27,6 +27,8 @@ class UpdateStoreRequest extends FormRequest
             'branch_email' => 'nullable|string|email|max:255|unique:users,email',
             'branch_password' => 'nullable|string|min:6|required_with:branch_email',
             'branch_name' => 'nullable|string|max:255',
+            'seller_email' => 'nullable|string|email|max:255',
+            'seller_password' => 'nullable|string|min:6',
         ];
     }
 }
